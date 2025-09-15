@@ -1,0 +1,744 @@
+{
+  "name": "My workflow 4",
+  "nodes": [
+    {
+      "parameters": {
+        "options": {
+          "systemMessage": "You are a Book Leaf chat assistant. For EVERY user question or request:\n1. FIRST use the Supabase vector store1 tool to search for relevant information\n2. Base your response ONLY on the information retrieved from the vector store\n3. If no relevant information is found in the vector store, explicitly state that you don't have that information in the knowledge base\n4. Always cite or reference the information you retrieved from the vector store\n5. Never provide answers without first consulting the vector store tool\n\nCRITICAL: You MUST end every single response with a confidence score in this exact format: [CONFIDENCE: XX] where XX is a number from 0-100 based on how well the retrieved information answers the question. \n\nExample response:\n\"Based on our knowledge base, Book Leaf's return policy allows returns within 30 days of purchase with original receipt. [CONFIDENCE: 90]\""
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [
+        208,
+        560
+      ],
+      "id": "eb195336-7314-483a-b1fb-f88c8b586cc6",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {},
+      "type": "@n8n/n8n-nodes-langchain.memoryPostgresChat",
+      "typeVersion": 1.3,
+      "position": [
+        256,
+        784
+      ],
+      "id": "6eb516ea-39c2-492c-a7a0-b5f11fbd380c",
+      "name": "Postgres Chat Memory",
+      "credentials": {
+        "postgres": {
+          "id": "GQjY7QAUEk0ikw46",
+          "name": "Postgres Chat Memory"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "retrieve-as-tool",
+        "toolDescription": "Search the Book Leaf knowledge base for relevant information to answer user questions. Always use this tool before responding to any user query. This contains all the necessary information about Book Leaf services, policies, and procedures.",
+        "tableName": {
+          "__rl": true,
+          "value": "documents",
+          "mode": "list",
+          "cachedResultName": "documents"
+        },
+        "topK": 10,
+        "includeDocumentMetadata": false,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreSupabase",
+      "typeVersion": 1.3,
+      "position": [
+        448,
+        752
+      ],
+      "id": "0ca84627-dc20-4a40-86c5-017e9375e02d",
+      "name": "Supabase Vector Store1",
+      "credentials": {
+        "supabaseApi": {
+          "id": "EGp2uvsPUIeasxfX",
+          "name": "Supabase Vector Store"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.embeddingsHuggingFaceInference",
+      "typeVersion": 1,
+      "position": [
+        640,
+        944
+      ],
+      "id": "ad1df6db-3c1b-4d25-acd8-70d8f96f2e36",
+      "name": "Embeddings HuggingFace Inference1",
+      "credentials": {
+        "huggingFaceApi": {
+          "id": "GtRtJ3bWzFql2BRb",
+          "name": "HuggingFaceApi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "Reconstructed workflow\n",
+        "height": 176,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -64,
+        496
+      ],
+      "typeVersion": 1,
+      "id": "23d5b076-0cc7-4d23-8c94-d7fbcd8adbe8",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "options": {
+          "responseMode": "responseNodes"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -16,
+        560
+      ],
+      "id": "002ed833-aab3-44de-abd0-f1f7e2a4cfcc",
+      "name": "When chat message received",
+      "webhookId": "5c310ce8-053e-4b5b-8a57-e0683ed908e9"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get the AI's response (adjust property name if needed)\nconst aiResponse = $input.first().json.output\n\n// Extract confidence score\nconst confidenceMatch = aiResponse.match(/\\[CONFIDENCE:\\s*(\\d+)\\]/i);\nconst confidence = confidenceMatch ? parseInt(confidenceMatch[1]) : 0;\n\n// Remove confidence tag from response\nconst cleanResponse = aiResponse.replace(/\\[CONFIDENCE:\\s*\\d+\\]/i, '').trim();\n\n// Return the processed data\nreturn [{\n  json: {\n    originalResponse: aiResponse,\n    cleanResponse: cleanResponse,\n    confidence: confidence,\n    needsHuman: confidence < 80\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        592,
+        560
+      ],
+      "id": "5d0d7da1-1c3f-4f95-972e-0ae74da77483",
+      "name": "Code1"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "a80de02c-a0d2-4c97-ab6f-42e1d7edefe1",
+              "leftValue": "={{ $json.needsHuman }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        800,
+        560
+      ],
+      "id": "cfb08162-8b51-4842-a690-4c2abb1d71aa",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "sendTo": "amranadaf@gmail.com, amranadaf3@gmail.com",
+        "subject": "AI agent needs help!",
+        "emailType": "text",
+        "message": "=IMMEDIATE ACTION REQUIRED ========================  AI HANDOFF ALERT - Low Confidence Response  Customer Details: - Platform: WhatsApp   - Session: {{ $('When chat message received').first().json.sessionId }} - Time: {{ $json.timestamp }}  CUSTOMER ASKED: \"{{ $json.userQuestion }}\"  AI ATTEMPTED ({{ $json.confidence }}% confidence): {{ $json.cleanResponse }}  URGENT ACTION NEEDED: 1. Open WhatsApp Business NOW 2. Find this customer's conversation 3. Take over manually and respond 4. Customer is waiting for human help  ⏰ RESPOND WITHIN 5 MINUTES ⏰  --- Auto-generated by Book Leaf AI System",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        1008,
+        464
+      ],
+      "id": "cfae8554-48fb-45cb-9f60-d4cd5e495f22",
+      "name": "Send a message",
+      "webhookId": "b4f0b096-bd8e-40d3-a43d-05c622fc07c2",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "XWkrWbukYy77IRhb",
+          "name": "Gmail account 6"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "Fallback to Humamn when confidence low.\n\n"
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        576,
+        496
+      ],
+      "typeVersion": 1,
+      "id": "797da477-48e1-4437-b636-95329e2ce021",
+      "name": "Sticky Note3"
+    },
+    {
+      "parameters": {
+        "message": "={{ $json.cleanResponse }}",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chat",
+      "typeVersion": 1,
+      "position": [
+        1008,
+        656
+      ],
+      "id": "3f86725a-3161-4779-9066-2ab30c7e1ea7",
+      "name": "Respond to Chat"
+    },
+    {
+      "parameters": {
+        "message": "You might get a better answer to this question from a human.\nHold on till I connect you with an availabe human service provider...... ",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chat",
+      "typeVersion": 1,
+      "position": [
+        1216,
+        464
+      ],
+      "id": "4ce7b206-00d7-4cf2-8a39-d37e3638223e",
+      "name": "Respond to Chat1"
+    },
+    {
+      "parameters": {
+        "mode": "retrieve-as-tool",
+        "toolDescription": "You are a helpful assisntant and this is the user databs=ase whihc contains all the information about the users email, publication, book title, IPBN number, last submission date, book live date and their add ons",
+        "tableName": {
+          "__rl": true,
+          "value": "user_data",
+          "mode": "list",
+          "cachedResultName": "user_data"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreSupabase",
+      "typeVersion": 1.3,
+      "position": [
+        -480,
+        1248
+      ],
+      "id": "28414817-5657-43b5-90f6-63a8c3de0661",
+      "name": "User_data",
+      "credentials": {
+        "supabaseApi": {
+          "id": "EGp2uvsPUIeasxfX",
+          "name": "Supabase Vector Store"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "User_data with issue due to RSL enabling issue\n",
+        "width": 304,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -512,
+        1184
+      ],
+      "typeVersion": 1,
+      "id": "65e89e4a-10c5-405f-a5df-4862137f98b3",
+      "name": "Sticky Note4"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.embeddingsHuggingFaceInference",
+      "typeVersion": 1,
+      "position": [
+        -224,
+        1408
+      ],
+      "id": "8d126572-0227-44d9-af0b-a61b8e129c83",
+      "name": "Embeddings HuggingFace Inference3",
+      "credentials": {
+        "huggingFaceApi": {
+          "id": "GtRtJ3bWzFql2BRb",
+          "name": "HuggingFaceApi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "insert",
+        "tableName": {
+          "__rl": true,
+          "value": "documents",
+          "mode": "list",
+          "cachedResultName": "documents"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreSupabase",
+      "typeVersion": 1.3,
+      "position": [
+        1312,
+        1184
+      ],
+      "id": "93fb3931-faa9-45ec-bc91-8fbb0d81613f",
+      "name": "Supabase Vector Store2",
+      "credentials": {
+        "supabaseApi": {
+          "id": "EGp2uvsPUIeasxfX",
+          "name": "Supabase Vector Store"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.embeddingsHuggingFaceInference",
+      "typeVersion": 1,
+      "position": [
+        1248,
+        1392
+      ],
+      "id": "2070b302-c232-4e5f-b165-067a4848dff0",
+      "name": "Embeddings HuggingFace Inference2",
+      "credentials": {
+        "huggingFaceApi": {
+          "id": "GtRtJ3bWzFql2BRb",
+          "name": "HuggingFaceApi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "dataType": "binary",
+        "loader": "docxLoader",
+        "textSplittingMode": "custom",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.documentDefaultDataLoader",
+      "typeVersion": 1.1,
+      "position": [
+        1456,
+        1392
+      ],
+      "id": "d3a9082f-c173-4f68-94e9-9f8a8ebc3cc9",
+      "name": "Default Data Loader"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.textSplitterRecursiveCharacterTextSplitter",
+      "typeVersion": 1,
+      "position": [
+        1552,
+        1600
+      ],
+      "id": "e9d5a663-51b5-4617-9110-758f221d6cc1",
+      "name": "Recursive Character Text Splitter"
+    },
+    {
+      "parameters": {
+        "operation": "download",
+        "fileId": {
+          "__rl": true,
+          "value": "1gHLESxlXtC73qv-sL0JsJ5zGbunrnPHp",
+          "mode": "list",
+          "cachedResultName": "writting_challange.docx",
+          "cachedResultUrl": "https://docs.google.com/document/d/1gHLESxlXtC73qv-sL0JsJ5zGbunrnPHp/edit?usp=drivesdk&ouid=107434791924530516668&rtpof=true&sd=true"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        1024,
+        1216
+      ],
+      "id": "da5a0746-8263-42aa-b793-c7b63c803b2b",
+      "name": "Download file",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "9Xn0B9ctFVjeybW6",
+          "name": "Google Drive account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "Flow for adding documentation to the supabase database\n",
+        "height": 224,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        960,
+        1136
+      ],
+      "typeVersion": 1,
+      "id": "d082eb4f-fd3e-422c-9884-8a071c1ab552",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "filters": {}
+      },
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -736,
+        560
+      ],
+      "id": "98bcbc26-d676-4e6b-a014-95203de450d4",
+      "name": "Gmail Trigger",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "XWkrWbukYy77IRhb",
+          "name": "Gmail account 6"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "updates": [
+          "messages"
+        ],
+        "options": {}
+      },
+      "type": "n8n-nodes-base.whatsAppTrigger",
+      "typeVersion": 1,
+      "position": [
+        -736,
+        752
+      ],
+      "id": "874190bd-c794-4500-a3ff-0edbb0518250",
+      "name": "WhatsApp Trigger",
+      "webhookId": "cd850ca2-5541-4f3f-b735-7ded41fc36e6",
+      "credentials": {
+        "whatsAppTriggerApi": {
+          "id": "1BCdJpId6qhoOGrD",
+          "name": "WhatsApp OAuth account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "send",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1,
+      "position": [
+        -464,
+        752
+      ],
+      "id": "76fb7154-b7f8-469e-a042-35eb83cddf10",
+      "name": "Send message",
+      "webhookId": "45a3f6e4-093a-41b7-874d-0a84192dd000"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        -448,
+        560
+      ],
+      "id": "fc35a0dd-5612-4079-aeb8-679779518e38",
+      "name": "Send a message1",
+      "webhookId": "88441811-bfe5-421b-a385-1bf1b2ac83c2",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "XWkrWbukYy77IRhb",
+          "name": "Gmail account 6"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "Pairs of recieveing multi channel messages and respoinding to them\n",
+        "height": 560,
+        "width": 512,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -768,
+        496
+      ],
+      "typeVersion": 1,
+      "id": "b09fc6d6-9110-4548-a1de-5ddd26667213",
+      "name": "Sticky Note5"
+    },
+    {
+      "parameters": {
+        "path": "e8ae1cc7-ac0f-4b4e-82df-0ab63ad3b6a9",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -464,
+        928
+      ],
+      "id": "bdcb2570-5572-497d-a2fd-e7de530ccd59",
+      "name": "Instagram POST",
+      "webhookId": "e8ae1cc7-ac0f-4b4e-82df-0ab63ad3b6a9"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "ad9d08a2-7aac-4ffd-9166-49db232d9807",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -736,
+        944
+      ],
+      "id": "5dbcd46e-4e6e-4713-898f-c9e3be9dd49e",
+      "name": "Instagram POST1",
+      "webhookId": "ad9d08a2-7aac-4ffd-9166-49db232d9807"
+    },
+    {
+      "parameters": {
+        "model": "llama-3.1-8b-instant",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
+      "typeVersion": 1,
+      "position": [
+        80,
+        768
+      ],
+      "id": "bfbb7b2a-30c1-4aac-808d-2a92c9feacbe",
+      "name": "Groq Chat Model",
+      "credentials": {
+        "groqApi": {
+          "id": "w6JYpHqfu1SINGja",
+          "name": "Groq account 2"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Postgres Chat Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings HuggingFace Inference1": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Supabase Vector Store1",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase Vector Store1": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When chat message received": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code1": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Code1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond to Chat",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a message": {
+      "main": [
+        [
+          {
+            "node": "Respond to Chat1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings HuggingFace Inference3": {
+      "ai_embedding": [
+        [
+          {
+            "node": "User_data",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings HuggingFace Inference2": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Supabase Vector Store2",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Default Data Loader": {
+      "ai_document": [
+        [
+          {
+            "node": "Supabase Vector Store2",
+            "type": "ai_document",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Recursive Character Text Splitter": {
+      "ai_textSplitter": [
+        [
+          {
+            "node": "Default Data Loader",
+            "type": "ai_textSplitter",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download file": {
+      "main": [
+        [
+          {
+            "node": "Supabase Vector Store2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send message": {
+      "main": [
+        []
+      ]
+    },
+    "Instagram POST1": {
+      "main": [
+        []
+      ]
+    },
+    "Groq Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner",
+    "errorWorkflow": "Unt8O85htYmynuk8",
+    "timezone": "Asia/Kolkata"
+  },
+  "versionId": "6a676f74-80bc-4a40-8a6b-cfc6ef5ab674",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "a80e79953156c167ed69035896d54eba7be3bc65f537e2668500b6439839bb45"
+  },
+  "id": "zSWx5qZjbxy2Q1zb",
+  "tags": []
+}
